@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SalonFlow.Api/SalonFlow.Api.csproj" />
+    <Project Path="src/SalonFlow.Application/SalonFlow.Application.csproj" />
+    <Project Path="src/SalonFlow.Domain/SalonFlow.Domain.csproj" />
+    <Project Path="src/SalonFlow.Infrastructure/SalonFlow.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SalonFlow.IntegrationTests/SalonFlow.IntegrationTests.csproj" />
+    <Project Path="tests/SalonFlow.UnitTests/SalonFlow.UnitTests.csproj" />
+  </Folder>
+</Solution>
