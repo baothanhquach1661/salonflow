@@ -1,0 +1,35 @@
+name: SalonFlow CI
+
+on: 
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+    workflow_dispatch:
+permissions:
+    contents: read
+
+jobs:
+    build-and-test:
+        name: Build and test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
+
+            - name: Set up .NET SDK
+              uses: actions/setup-dotnet@v6
+              with:
+                  global-json-file: global.json
+
+            - name: Restore dependencies
+              run: dotnet restore SalonFlow.slnx
+
+            - name: Verify formatting
+              run: dotnet format SalonFlow.slnx --verify-no-changes --no-restore
+
+            - name: Build
+              run: dotnet build SalonFlow.slnx --configuration Release --no-restore
+
+            - name: Test
+              run: dotnet test SalonFlow.slnx --configuration Release --no-build
