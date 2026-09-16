@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 
 using SalonFlow.Domain.Appointments;
+using SalonFlow.Domain.Services;
 using SalonFlow.Domain.StaffMembers;
 using SalonFlow.Infrastructure.Persistence.Appointments;
+using SalonFlow.Infrastructure.Persistence.Services;
 using SalonFlow.Infrastructure.Persistence.StaffMembers;
 
 namespace SalonFlow.Infrastructure.Persistence;
@@ -11,6 +13,8 @@ public sealed class SalonFlowDbContext(
     DbContextOptions<SalonFlowDbContext> options)
     : DbContext(options)
 {
+    public DbSet<SalonService> SalonServices =>
+    Set<SalonService>();
     public DbSet<StaffMember> StaffMembers => Set<StaffMember>();
     public DbSet<Appointment> Appointments =>
         Set<Appointment>();
@@ -20,6 +24,9 @@ public sealed class SalonFlowDbContext(
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.ApplyConfiguration(
+            new SalonServiceConfiguration());
+
         modelBuilder.ApplyConfiguration(new StaffMemberConfiguration());
 
         base.OnModelCreating(modelBuilder);

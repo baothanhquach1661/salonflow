@@ -8,8 +8,14 @@
     <div class="col-xl-9">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <p class="text-primary fw-semibold mb-1">APPOINTMENTS</p>
-                <h1 class="h2 fw-bold mb-1">New Appointment</h1>
+                <p class="text-primary fw-semibold mb-1">
+                    APPOINTMENTS
+                </p>
+
+                <h1 class="h2 fw-bold mb-1">
+                    New Appointment
+                </h1>
+
                 <p class="text-secondary mb-0">
                     Schedule a service for a customer.
                 </p>
@@ -19,25 +25,6 @@
                 Back to Dashboard
             </a>
         </div>
-
-        @if (Model.CreatedAppointmentId.HasValue)
-        {
-            <div class="alert alert-success">
-                <h2 class="h5">Appointment created successfully</h2>
-
-                <p class="mb-1">
-                    ID: <strong>@Model.CreatedAppointmentId</strong>
-                </p>
-
-                <p class="mb-1">
-                    Status: <strong>@Model.CreatedStatus</strong>
-                </p>
-
-                <p class="mb-0">
-                    UTC time: @Model.StartsAtUtc → @Model.EndsAtUtc
-                </p>
-            </div>
-        }
 
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
@@ -63,24 +50,31 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="ServiceName" class="form-label"></label>
+                            <label asp-for="ServiceId" class="form-label"></label>
 
-                            <select asp-for="ServiceName" class="form-select">
-                                <option value="">Select a service</option>
-                                <option value="Haircut">Haircut</option>
-                                <option value="Hair Coloring">Hair Coloring</option>
-                                <option value="Manicure">Manicure</option>
-                                <option value="Pedicure">Pedicure</option>
+                            <select asp-for="ServiceId" class="form-select">
+                                <option value="">
+                                    Select a service
+                                </option>
+
+                                @foreach (var service in Model.AvailableServices)
+                                {
+                                    <option value="@service.Id">
+                                        @($"{service.Name} — {service.DurationMinutes} min — {service.Price:C}")
+                                    </option>
+                                }
                             </select>
 
-                            <span asp-validation-for="ServiceName" class="text-danger"></span>
+                            <span asp-validation-for="ServiceId" class="text-danger"></span>
                         </div>
 
                         <div class="col-md-6">
                             <label asp-for="StaffMemberId" class="form-label"></label>
 
                             <select asp-for="StaffMemberId" class="form-select">
-                                <option value="">Any available staff</option>
+                                <option value="">
+                                    Any available staff
+                                </option>
 
                                 @foreach (var staffMember in Model.AvailableStaffMembers)
                                 {
@@ -99,19 +93,6 @@
                             <input asp-for="StartsAtLocal" type="datetime-local" class="form-control" />
 
                             <span asp-validation-for="StartsAtLocal" class="text-danger"></span>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="DurationMinutes" class="form-label"></label>
-
-                            <select asp-for="DurationMinutes" class="form-select">
-                                <option value="30">30 minutes</option>
-                                <option value="45">45 minutes</option>
-                                <option value="60">60 minutes</option>
-                                <option value="90">90 minutes</option>
-                            </select>
-
-                            <span asp-validation-for="DurationMinutes" class="text-danger"></span>
                         </div>
 
                         <div class="col-12">

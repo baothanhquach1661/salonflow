@@ -17,7 +17,11 @@ public sealed class CreateAppointmentViewModel
 
     [Required]
     [Display(Name = "Service")]
-    public string ServiceName { get; set; } = string.Empty;
+    public Guid? ServiceId { get; set; }
+
+    public IReadOnlyList<SalonServiceOptionViewModel>
+        AvailableServices
+    { get; set; } = [];
 
     [Display(Name = "Staff Member")]
     public Guid? StaffMemberId { get; set; }
@@ -30,10 +34,6 @@ public sealed class CreateAppointmentViewModel
     [Display(Name = "Start Time")]
     public DateTime? StartsAtLocal { get; set; }
 
-    [Range(15, 480)]
-    [Display(Name = "Duration")]
-    public int DurationMinutes { get; set; } = 45;
-
     [StringLength(500)]
     public string? Notes { get; set; }
 
@@ -45,6 +45,12 @@ public sealed class CreateAppointmentViewModel
 
     public DateTimeOffset? EndsAtUtc { get; set; }
 }
+
+public sealed record SalonServiceOptionViewModel(
+    Guid Id,
+    string Name,
+    int DurationMinutes,
+    decimal Price);
 
 public sealed record StaffMemberOptionViewModel(
     Guid Id,

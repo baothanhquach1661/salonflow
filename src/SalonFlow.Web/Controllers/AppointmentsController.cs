@@ -21,28 +21,30 @@ public sealed class AppointmentsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        CancellationToken cancellationToken)
     {
         var appointments = await _dbContext.AppointmentDetails
             .AsNoTracking()
             .Include(item => item.Appointment)
+            .Where(item =>
+                item.Appointment.SalonId == DevelopmentSalonId)
             .OrderBy(item => item.Appointment.StartsAtUtc)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return View(appointments);
     }
 
     [HttpGet]
     public async Task<IActionResult> Create(
-    CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var model = new CreateAppointmentViewModel
         {
-            StartsAtLocal = DateTime.Now.AddHours(1),
-            DurationMinutes = 45
+            StartsAtLocal = DateTime.Now.AddHours(1)
         };
 
-        await PopulateAvailableStaffMembersAsync(
+        await PopulateAppointmentOptionsAsync(
             model,
             cancellationToken);
 
@@ -52,12 +54,34 @@ public sealed class AppointmentsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-    CreateAppointmentViewModel model,
-    CancellationToken cancellationToken)
+        CreateAppointmentViewModel model,
+        CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
-            await PopulateAvailableStaffMembersAsync(
+            await PopulateAppointmentOptionsAsync(
+                model,
+                cancellationToken);
+
+            return View(model);
+        }
+
+        var selectedService = await _dbContext.SalonServices
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                service =>
+                    service.Id == model.ServiceId!.Value &&
+                    service.SalonId == DevelopmentSalonId &&
+                    service.IsActive,
+                cancellationToken);
+
+        if (selectedService is null)
+        {
+            ModelState.AddModelError(
+                nameof(model.ServiceId),
+                "The selected service is not available.");
+
+            await PopulateAppointmentOptionsAsync(
                 model,
                 cancellationToken);
 
@@ -82,7 +106,7 @@ public sealed class AppointmentsController : Controller
                 nameof(model.StaffMemberId),
                 "The selected staff member is not available.");
 
-            await PopulateAvailableStaffMembersAsync(
+            await PopulateAppointmentOptionsAsync(
                 model,
                 cancellationToken);
 
@@ -98,9 +122,9 @@ public sealed class AppointmentsController : Controller
             var appointment = Appointment.Schedule(
                 DevelopmentSalonId,
                 Guid.NewGuid(),
-                Guid.NewGuid(),
+                selectedService.Id,
                 new DateTimeOffset(localStart).ToUniversalTime(),
-                TimeSpan.FromMinutes(model.DurationMinutes),
+                selectedService.Duration,
                 DateTimeOffset.UtcNow,
                 selectedStaffMember?.Id);
 
@@ -108,7 +132,7 @@ public sealed class AppointmentsController : Controller
                 appointment.Id,
                 model.CustomerName,
                 model.PhoneNumber,
-                model.ServiceName,
+                selectedService.Name,
                 selectedStaffMember?.Name,
                 model.Notes);
 
@@ -124,9 +148,11 @@ public sealed class AppointmentsController : Controller
         }
         catch (ArgumentException exception)
         {
-            ModelState.AddModelError(string.Empty, exception.Message);
+            ModelState.AddModelError(
+                string.Empty,
+                exception.Message);
 
-            await PopulateAvailableStaffMembersAsync(
+            await PopulateAppointmentOptionsAsync(
                 model,
                 cancellationToken);
 
@@ -134,29 +160,18 @@ public sealed class AppointmentsController : Controller
         }
     }
 
-    private async Task PopulateAvailableStaffMembersAsync(
-    CreateAppointmentViewModel model,
-    CancellationToken cancellationToken)
-    {
-        model.AvailableStaffMembers = await _dbContext.StaffMembers
-            .AsNoTracking()
-            .Where(staffMember =>
-                staffMember.SalonId == DevelopmentSalonId &&
-                staffMember.IsActive)
-            .OrderBy(staffMember => staffMember.Name)
-            .Select(staffMember =>
-                new StaffMemberOptionViewModel(
-                    staffMember.Id,
-                    staffMember.Name))
-            .ToListAsync(cancellationToken);
-    }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CheckIn(Guid id)
+    public async Task<IActionResult> CheckIn(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var appointment = await _dbContext.Appointments
-            .SingleOrDefaultAsync(item => item.Id == id);
+            .SingleOrDefaultAsync(
+                item =>
+                    item.Id == id &&
+                    item.SalonId == DevelopmentSalonId,
+                cancellationToken);
 
         if (appointment is null)
         {
@@ -166,7 +181,9 @@ public sealed class AppointmentsController : Controller
         try
         {
             appointment.CheckIn();
-            await _dbContext.SaveChangesAsync();
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
 
             TempData["SuccessMessage"] =
                 "Customer checked in successfully.";
@@ -181,10 +198,16 @@ public sealed class AppointmentsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> StartService(Guid id)
+    public async Task<IActionResult> StartService(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var appointment = await _dbContext.Appointments
-            .SingleOrDefaultAsync(item => item.Id == id);
+            .SingleOrDefaultAsync(
+                item =>
+                    item.Id == id &&
+                    item.SalonId == DevelopmentSalonId,
+                cancellationToken);
 
         if (appointment is null)
         {
@@ -194,7 +217,9 @@ public sealed class AppointmentsController : Controller
         try
         {
             appointment.StartService();
-            await _dbContext.SaveChangesAsync();
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
 
             TempData["SuccessMessage"] =
                 "Service started successfully.";
@@ -209,10 +234,16 @@ public sealed class AppointmentsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Complete(Guid id)
+    public async Task<IActionResult> Complete(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var appointment = await _dbContext.Appointments
-            .SingleOrDefaultAsync(item => item.Id == id);
+            .SingleOrDefaultAsync(
+                item =>
+                    item.Id == id &&
+                    item.SalonId == DevelopmentSalonId,
+                cancellationToken);
 
         if (appointment is null)
         {
@@ -222,7 +253,9 @@ public sealed class AppointmentsController : Controller
         try
         {
             appointment.Complete();
-            await _dbContext.SaveChangesAsync();
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
 
             TempData["SuccessMessage"] =
                 "Appointment completed successfully.";
@@ -237,10 +270,16 @@ public sealed class AppointmentsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(Guid id)
+    public async Task<IActionResult> Cancel(
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var appointment = await _dbContext.Appointments
-            .SingleOrDefaultAsync(item => item.Id == id);
+            .SingleOrDefaultAsync(
+                item =>
+                    item.Id == id &&
+                    item.SalonId == DevelopmentSalonId,
+                cancellationToken);
 
         if (appointment is null)
         {
@@ -250,7 +289,9 @@ public sealed class AppointmentsController : Controller
         try
         {
             appointment.Cancel();
-            await _dbContext.SaveChangesAsync();
+
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
 
             TempData["SuccessMessage"] =
                 "Appointment cancelled successfully.";
@@ -261,5 +302,58 @@ public sealed class AppointmentsController : Controller
         }
 
         return RedirectToAction("Index", "Home");
+    }
+
+    private async Task PopulateAppointmentOptionsAsync(
+        CreateAppointmentViewModel model,
+        CancellationToken cancellationToken)
+    {
+        await PopulateAvailableServicesAsync(
+            model,
+            cancellationToken);
+
+        await PopulateAvailableStaffMembersAsync(
+            model,
+            cancellationToken);
+    }
+
+    private async Task PopulateAvailableServicesAsync(
+        CreateAppointmentViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var services = await _dbContext.SalonServices
+            .AsNoTracking()
+            .Where(service =>
+                service.SalonId == DevelopmentSalonId &&
+                service.IsActive)
+            .OrderBy(service => service.Name)
+            .ToListAsync(cancellationToken);
+
+        model.AvailableServices = services
+            .Select(service =>
+                new SalonServiceOptionViewModel(
+                    service.Id,
+                    service.Name,
+                    (int)service.Duration.TotalMinutes,
+                    service.Price))
+            .ToList();
+    }
+
+    private async Task PopulateAvailableStaffMembersAsync(
+        CreateAppointmentViewModel model,
+        CancellationToken cancellationToken)
+    {
+        model.AvailableStaffMembers =
+            await _dbContext.StaffMembers
+                .AsNoTracking()
+                .Where(staffMember =>
+                    staffMember.SalonId == DevelopmentSalonId &&
+                    staffMember.IsActive)
+                .OrderBy(staffMember => staffMember.Name)
+                .Select(staffMember =>
+                    new StaffMemberOptionViewModel(
+                        staffMember.Id,
+                        staffMember.Name))
+                .ToListAsync(cancellationToken);
     }
 }
