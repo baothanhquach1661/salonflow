@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SalonFlow.Application\SalonFlow.Application.csproj" />
     <ProjectReference Include="..\SalonFlow.Infrastructure\SalonFlow.Infrastructure.csproj" />
+    <ProjectReference Include="..\SalonFlow.Domain\SalonFlow.Domain.csproj" />
   </ItemGroup>
 
 </Project>

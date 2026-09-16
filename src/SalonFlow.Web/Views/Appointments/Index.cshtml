@@ -1,0 +1,94 @@
+@model IReadOnlyList<SalonFlow.Infrastructure.Persistence.Appointments.AppointmentDetails>
+@using SalonFlow.Domain.Appointments
+
+@{
+    ViewData["Title"] = "Appointments";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="text-primary fw-semibold mb-1">SALONFLOW</p>
+        <h1 class="h2 fw-bold mb-1">Appointments</h1>
+        <p class="text-secondary mb-0">
+            View all scheduled appointments.
+        </p>
+    </div>
+
+    <a asp-action="Create" class="btn btn-primary">
+        + New Appointment
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success">
+        @message
+    </div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        @if (Model.Count == 0)
+        {
+            <div class="text-center text-secondary py-5">
+                No appointments have been scheduled.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Start Time</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Staff</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var statusText = item.Appointment.Status switch
+                            {
+                                AppointmentStatus.CheckedIn => "Checked In",
+                                AppointmentStatus.InService => "In Service",
+                                _ => item.Appointment.Status.ToString()
+                            };
+
+                            <tr>
+                                <td>
+                                    @(item.Appointment.StartsAtUtc
+                                        .ToLocalTime()
+                                        .ToString("MMM d, yyyy h:mm tt"))
+                                </td>
+                                <td>@item.CustomerName</td>
+                                <td>@item.PhoneNumber</td>
+                                <td>@item.ServiceName</td>
+                                <td>@(item.StaffMemberName ?? "Any staff")</td>
+                                <td>
+                                    @($"{item.Appointment.Duration.TotalMinutes:0} min")
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        @statusText
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

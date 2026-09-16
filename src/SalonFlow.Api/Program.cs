@@ -18,6 +18,13 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.MapGet("/", () => new
+{
+    Application = "SalonFlow API",
+    Status = "Running",
+    TimestampUtc = DateTimeOffset.UtcNow
+});
+
 app.MapControllers();
 
 app.Run();
