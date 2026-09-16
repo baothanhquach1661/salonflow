@@ -77,13 +77,20 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="StaffMemberName" class="form-label"></label>
+                            <label asp-for="StaffMemberId" class="form-label"></label>
 
-                            <select asp-for="StaffMemberName" class="form-select">
+                            <select asp-for="StaffMemberId" class="form-select">
                                 <option value="">Any available staff</option>
-                                <option value="Staff Member 1">Staff Member 1</option>
-                                <option value="Staff Member 2">Staff Member 2</option>
+
+                                @foreach (var staffMember in Model.AvailableStaffMembers)
+                                {
+                                    <option value="@staffMember.Id">
+                                        @staffMember.Name
+                                    </option>
+                                }
                             </select>
+
+                            <span asp-validation-for="StaffMemberId" class="text-danger"></span>
                         </div>
 
                         <div class="col-md-6">

@@ -10,6 +10,9 @@ namespace SalonFlow.Web.Controllers;
 
 public sealed class HomeController : Controller
 {
+    private static readonly Guid DevelopmentSalonId =
+    Guid.Parse("11111111-1111-1111-1111-111111111111");
+
     private readonly SalonFlowDbContext _dbContext;
 
     public HomeController(SalonFlowDbContext dbContext)
@@ -17,13 +20,16 @@ public sealed class HomeController : Controller
         _dbContext = dbContext;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+    CancellationToken cancellationToken)
     {
         var appointments = await _dbContext.AppointmentDetails
             .AsNoTracking()
             .Include(item => item.Appointment)
+            .Where(item =>
+                item.Appointment.SalonId == DevelopmentSalonId)
             .OrderBy(item => item.Appointment.StartsAtUtc)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var today = DateTime.Today;
 
@@ -34,8 +40,17 @@ public sealed class HomeController : Controller
                     .Date == today)
             .ToList();
 
-        return View(
-            new DashboardViewModel(todaysAppointments));
+        var availableStaffCount = await _dbContext.StaffMembers
+            .AsNoTracking()
+            .CountAsync(
+                staffMember =>
+                    staffMember.SalonId == DevelopmentSalonId &&
+                    staffMember.IsActive,
+                cancellationToken);
+
+        return View(new DashboardViewModel(
+            todaysAppointments,
+            availableStaffCount));
     }
 
     public IActionResult Privacy()

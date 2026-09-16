@@ -4,7 +4,8 @@ using SalonFlow.Infrastructure.Persistence.Appointments;
 namespace SalonFlow.Web.Models;
 
 public sealed record DashboardViewModel(
-    IReadOnlyList<AppointmentDetails> TodaysAppointments)
+    IReadOnlyList<AppointmentDetails> TodaysAppointments,
+    int AvailableStaffCount)
 {
     public int TodaysAppointmentCount =>
         TodaysAppointments.Count;
