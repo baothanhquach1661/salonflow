@@ -33,7 +33,8 @@ public sealed class AppointmentsController : Controller
     }
 
     [HttpGet]
-    public IActionResult Create()
+    public async Task<IActionResult> Create(
+    CancellationToken cancellationToken)
     {
         var model = new CreateAppointmentViewModel
         {
@@ -41,16 +42,50 @@ public sealed class AppointmentsController : Controller
             DurationMinutes = 45
         };
 
+        await PopulateAvailableStaffMembersAsync(
+            model,
+            cancellationToken);
+
         return View(model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-        CreateAppointmentViewModel model)
+    CreateAppointmentViewModel model,
+    CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
+            await PopulateAvailableStaffMembersAsync(
+                model,
+                cancellationToken);
+
+            return View(model);
+        }
+
+        var selectedStaffMember = model.StaffMemberId.HasValue
+            ? await _dbContext.StaffMembers
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    staffMember =>
+                        staffMember.Id == model.StaffMemberId.Value &&
+                        staffMember.SalonId == DevelopmentSalonId &&
+                        staffMember.IsActive,
+                    cancellationToken)
+            : null;
+
+        if (model.StaffMemberId.HasValue &&
+            selectedStaffMember is null)
+        {
+            ModelState.AddModelError(
+                nameof(model.StaffMemberId),
+                "The selected staff member is not available.");
+
+            await PopulateAvailableStaffMembersAsync(
+                model,
+                cancellationToken);
+
             return View(model);
         }
 
@@ -67,22 +102,20 @@ public sealed class AppointmentsController : Controller
                 new DateTimeOffset(localStart).ToUniversalTime(),
                 TimeSpan.FromMinutes(model.DurationMinutes),
                 DateTimeOffset.UtcNow,
-                string.IsNullOrWhiteSpace(model.StaffMemberName)
-                    ? null
-                    : Guid.NewGuid());
+                selectedStaffMember?.Id);
 
             var details = new AppointmentDetails(
                 appointment.Id,
                 model.CustomerName,
                 model.PhoneNumber,
                 model.ServiceName,
-                model.StaffMemberName,
+                selectedStaffMember?.Name,
                 model.Notes);
 
             _dbContext.Appointments.Add(appointment);
             _dbContext.AppointmentDetails.Add(details);
 
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
             TempData["SuccessMessage"] =
                 "Appointment created successfully.";
@@ -92,8 +125,30 @@ public sealed class AppointmentsController : Controller
         catch (ArgumentException exception)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
+
+            await PopulateAvailableStaffMembersAsync(
+                model,
+                cancellationToken);
+
             return View(model);
         }
+    }
+
+    private async Task PopulateAvailableStaffMembersAsync(
+    CreateAppointmentViewModel model,
+    CancellationToken cancellationToken)
+    {
+        model.AvailableStaffMembers = await _dbContext.StaffMembers
+            .AsNoTracking()
+            .Where(staffMember =>
+                staffMember.SalonId == DevelopmentSalonId &&
+                staffMember.IsActive)
+            .OrderBy(staffMember => staffMember.Name)
+            .Select(staffMember =>
+                new StaffMemberOptionViewModel(
+                    staffMember.Id,
+                    staffMember.Name))
+            .ToListAsync(cancellationToken);
     }
 
     [HttpPost]

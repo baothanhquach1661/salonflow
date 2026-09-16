@@ -20,7 +20,11 @@ public sealed class CreateAppointmentViewModel
     public string ServiceName { get; set; } = string.Empty;
 
     [Display(Name = "Staff Member")]
-    public string? StaffMemberName { get; set; }
+    public Guid? StaffMemberId { get; set; }
+
+    public IReadOnlyList<StaffMemberOptionViewModel>
+        AvailableStaffMembers
+    { get; set; } = [];
 
     [Required]
     [Display(Name = "Start Time")]
@@ -41,3 +45,7 @@ public sealed class CreateAppointmentViewModel
 
     public DateTimeOffset? EndsAtUtc { get; set; }
 }
+
+public sealed record StaffMemberOptionViewModel(
+    Guid Id,
+    string Name);
